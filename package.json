@@ -1,15 +1,16 @@
 {
   "name": "node_express",
   "version": "1.0.0",
-  "description": "",
+  "description": "Curso express js",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Felipe Coll",
+  "license": "MIT",
   "dependencies": {
     "express": "^5.1.0"
-  }
+  },
+  "devDependencies": {}
 }
