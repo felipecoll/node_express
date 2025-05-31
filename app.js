@@ -37,6 +37,36 @@ app.get('/search', (req, res) => {
         `);
 });
 
+//Ruta para procesar datos del formulario
+
+app.post('/form', (req, res) => {
+    const { name, email } = req.body;
+    res.send(`
+        <h2>Datos recibidos:</h2>
+        <p>Nombre: ${name}</p>
+        <p>Email: ${email}</p>
+    `);
+
+    res.json({
+        message: 'Datos recibidos correctamente',
+        data: {
+            name: name,
+            email: email
+        }
+    });
+});
+
+app.post('/api/data', (req, res) => {
+    const data = req.body;
+
+    if(!data || Object.keys(data).length === 0) {
+        return res.status(400).json({ error: 'No se recibieron datos' });
+    }
+    res.status(201).json({
+        message: 'Datos recibidos correctamente',
+        data: data
+    });
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
