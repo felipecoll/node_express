@@ -26,8 +26,15 @@ app.get('/users/:id', (req, res) => {
 });
 
 app.get('/search', (req, res) => {
-    const query = req.query.q || 'No query provided';
-    res.send(`Resultados de búsqueda para: ${query}`);
+    const terms = req.query.termino || 'No introdujo una búsqueda';
+    const category = req.query.categoria || 'Todas';
+
+    res.send(`
+            <h2>Resultados de la busqueda:</h2>
+            <p>Termino: ${terms}</p>
+            <p>Categoría: ${category}</p>
+            <p>Esta es una búsqueda de ejemplo.</p>
+        `);
 });
 
 
