@@ -3,9 +3,17 @@ const express = require('express');
 //Middleware
 const bodyParser = require('body-parser');
 
+const fs = require('fs');
+
+//Path o ruta de archivo
+const Path = require('path');   
+const userFilePath = Path.join(__dirname, 'users.json');
+
 const app = express();
-app.use('body-parser', bodyParser.json());
-app.use('body-parser', bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+//app.use(express.json());
 
 
 const PORT = process.env.PORT || 3000;
@@ -40,34 +48,57 @@ app.get('/search', (req, res) => {
 //Ruta para procesar datos del formulario
 
 app.post('/form', (req, res) => {
-    const { name, email } = req.body;
-    res.send(`
-        <h2>Datos recibidos:</h2>
-        <p>Nombre: ${name}</p>
-        <p>Email: ${email}</p>
-    `);
-
+    const name = req.body.name || "anónimo";
+    const email = req.body.email || "no proporcionado";
+    
     res.json({
-        message: 'Datos recibidos correctamente',
+        message: "Datos recibidos",
         data: {
-            name: name,
-            email: email
+            name,
+            email
         }
     });
 });
 
-app.post('/api/data', (req, res) => {
-    const data = req.body;
 
-    if(!data || Object.keys(data).length === 0) {
-        return res.status(400).json({ error: 'No se recibieron datos' });
+app.post('/data', (req, res) => {
+    const data = req.body;
+    
+    // Validación para asegurar que recibimos datos válidos
+    if (!data || Object.keys(data).length === 0) {
+        return res.status(400).json({
+            error: "No se recibieron datos"
+        });
     }
-    res.status(201).json({
-        message: 'Datos recibidos correctamente',
-        data: data
+    
+    res.status(200).json({
+        message: "Datos JSON recibidos",
+        data
     });
 });
 
+// =======================================================
+
+app.get('/users', (req, res) => {
+    // Leer el archivo users.json
+    fs.readFile(userFilePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Error al leer el archivo:', err);
+            return res.status(500).json({ error: 'Error al leer los usuarios' });
+        }
+
+        try {
+            const users = JSON.parse(data);
+            res.json(users);
+        } catch (parseError) {
+            console.error('Error al parsear el JSON:', parseError);
+            res.status(500).json({ error: 'Error al procesar los datos de los usuarios' });
+        }
+    });
+})
+
+
+//Prueba y control de servidor corriendo
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
