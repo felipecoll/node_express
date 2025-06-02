@@ -1,5 +1,8 @@
 require('dotenv').config();
 const express = require('express');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 
 const LoggerMiddleware = require('./middlewares/logger.js'); // Importa el middleware de logger
 const errorHandler = require('./middlewares/errorHandler.js'); // Importa el middleware de manejo de errores
@@ -164,6 +167,16 @@ app.get('/error', (req, res,next) => {
   next(new Error('Este es un error simulado'));
 });
 
+//================== Prisma ==================
+app.get('/db-users', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany();
+    res.json(users);
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+});
 
 //================== Server ================== >
 
