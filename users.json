@@ -11,17 +11,12 @@
   },
   {
     "id": 3,
-    "name": "Carla Paine",
-    "email": "carla2@example.com"
+    "name": "Ringo Starr",
+    "email": "ringos2@example.com"
   },
   {
     "id": 4,
-    "name": "Ringo Starr",
-    "email": "ringos2@example.com"
-  },
-  {
-    "id": 3,
-    "name": "Ringo Starr",
-    "email": "ringos2@example.com"
+    "name": "Ringo Star",
+    "email": "ringuito4@example.com"
   }
 ]

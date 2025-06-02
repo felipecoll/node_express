@@ -97,6 +97,7 @@ app.get('/users', (req, res) => {
     });
 })
 
+//Agregando usuarios a un archivo JSON
 app.post('/users', (req, res) => {
     const newUser = req.body;
 
@@ -131,6 +132,47 @@ app.post('/users', (req, res) => {
     });
 })
 
+app.put('/users/:id', (req, res) => {
+    const userId = parseInt(req.params.id);
+    const updatedUser = req.body;
+
+    // Validación básica
+    if (!updatedUser.name || !updatedUser.email) {
+        return res.status(400).json({ error: 'Nombre y correo electrónico son requeridos' });
+    }
+
+    // Leer el archivo users.json
+    fs.readFile(userFilePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Error al leer el archivo:', err);
+            return res.status(500).json({ error: 'Error al leer los usuarios' });
+        }
+
+        try {
+            const users = JSON.parse(data);
+            const userIndex = users.findIndex(user => user.id === userId);
+
+            if (userIndex === -1) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+
+            // Actualizar el usuario
+            users[userIndex] = { ...users[userIndex], ...updatedUser };
+
+            // Escribir de nuevo en el archivo
+            fs.writeFile(userFilePath, JSON.stringify(users, null, 2), (writeErr) => {
+                if (writeErr) {
+                    console.error('Error al escribir en el archivo:', writeErr);
+                    return res.status(500).json({ error: 'Error al actualizar el usuario' });
+                }
+                res.json(users[userIndex]);
+            });
+        } catch (parseError) {
+            console.error('Error al parsear el JSON:', parseError);
+            res.status(500).json({ error: 'Error al procesar los datos de los usuarios' });
+        }
+    });
+})
 
 //Prueba y control de servidor corriendo
 app.listen(PORT, () => {
