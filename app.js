@@ -1,180 +1,132 @@
-require('dotenv').config(); // Cargar variables de entorno desde .env
+require('dotenv').config();
 const express = require('express');
-//Middleware
+
+const { validateUser } = require('./validation.js'); // Importa la función de validación
+
 const bodyParser = require('body-parser');
 
 const fs = require('fs');
-
-//Path o ruta de archivo
-const Path = require('path');   
-const userFilePath = Path.join(__dirname, 'users.json');
+const path = require('path');
+const usersFilePath = path.join(__dirname, 'users.json');
 
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-//app.use(express.json());
-
-
 const PORT = process.env.PORT || 3000;
-console.log(PORT)
+console.log(PORT);
 
 app.get('/', (req, res) => {
-    res.send(`
-        <h1>Curso express Js</h1>
-        <p>Este es un ejemplo de una aplicación Express.</p>
-        <p>Corre en el puerto ${PORT} de momento...</p>
-        `);  
+  res.send(`
+      <h1>Curso Express.js V3</h1>
+      <p>Esto es una aplicación node.js con express.js</p>
+      <p>Corre en el puerto: ${PORT}</p>
+    `);
 });
 
-// Rutas adicionales
 app.get('/users/:id', (req, res) => {
-    const userId = req.params.id;
-    res.send(`Detalles del usuario con ID: ${userId}`);
+  const userId = req.params.id;
+  res.send(`Mostrar información del usuario con ID: ${userId}`);
 });
 
 app.get('/search', (req, res) => {
-    const terms = req.query.termino || 'No introdujo una búsqueda';
-    const category = req.query.categoria || 'Todas';
+  const terms = req.query.termino || 'No especificado';
+  const category = req.query.categoria || 'Todas';
 
-    res.send(`
-            <h2>Resultados de la busqueda:</h2>
-            <p>Termino: ${terms}</p>
-            <p>Categoría: ${category}</p>
-            <p>Esta es una búsqueda de ejemplo.</p>
-        `);
+  res.send(`
+      <h2>Resultados de Busqueda:</h2>
+      <p>Término: ${terms}</p>
+      <p>Categoría: ${category}</p>
+    `);
 });
-
-//Ruta para procesar datos del formulario
 
 app.post('/form', (req, res) => {
-    const name = req.body.name || "anónimo";
-    const email = req.body.email || "no proporcionado";
-    
-    res.json({
-        message: "Datos recibidos",
-        data: {
-            name,
-            email
-        }
-    });
-});
-
-
-app.post('/data', (req, res) => {
-    const data = req.body;
-    
-    // Validación para asegurar que recibimos datos válidos
-    if (!data || Object.keys(data).length === 0) {
-        return res.status(400).json({
-            error: "No se recibieron datos"
-        });
+  const name = req.body.nombre || 'Anónimo';
+  const email = req.body.email || 'No proporcionado';
+  res.json({
+    message: 'Datos recibidos',
+    data: {
+      name,
+      email
     }
-    
-    res.status(200).json({
-        message: "Datos JSON recibidos",
-        data
-    });
+  });
 });
 
-// =======================================================
+app.post('/api/data', (req, res) => {
+  const data = req.body;
+
+  if (!data || Object.keys(data).length === 0) {
+    return res.status(400).json({ error: 'No se recibieron datos' });
+  }
+
+  res.status(201).json({
+    message: 'Datos JSON recibidos',
+    data
+  });
+});
 
 app.get('/users', (req, res) => {
-    // Leer el archivo users.json
-    fs.readFile(userFilePath, 'utf8', (err, data) => {
-        if (err) {
-            console.error('Error al leer el archivo:', err);
-            return res.status(500).json({ error: 'Error al leer los usuarios' });
-        }
+  fs.readFile(usersFilePath, 'utf-8', (err, data) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error con conexión de datos.' });
+    }
+    const users = JSON.parse(data);
+    res.json(users);
+  });
+});
 
-        try {
-            const users = JSON.parse(data);
-            res.json(users);
-        } catch (parseError) {
-            console.error('Error al parsear el JSON:', parseError);
-            res.status(500).json({ error: 'Error al procesar los datos de los usuarios' });
-        }
-    });
-})
-
-//Agregando usuarios a un archivo JSON
 app.post('/users', (req, res) => {
-    const newUser = req.body;
+  const newUser = req.body;
+  fs.readFile(usersFilePath, 'utf-8', (err, data) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error con conexión de datos.' });
+    }
+    const users = JSON.parse(data);
 
-    // Validación básica
-     if (!newUser.name || !newUser.email) {
-         return res.status(400).json({ error: 'Nombre y correo electrónico son requeridos' });
-     }
-
-    // Leer el archivo users.json
-    fs.readFile(userFilePath, 'utf8', (err, data) => {
-        if (err) {
-            console.error('Error al leer el archivo:', err);
-            return res.status(500).json({ error: 'Error al leer los usuarios' });
-        }
-
-        try {
-            const users = JSON.parse(data);
-            users.push(newUser);
-
-            // Escribir de nuevo en el archivo
-            fs.writeFile(userFilePath, JSON.stringify(users, null, 2), (writeErr) => {
-                if (writeErr) {
-                    console.error('Error al escribir en el archivo:', writeErr);
-                    return res.status(500).json({ error: 'Error al guardar el nuevo usuario' });
-                }
-                res.status(201).json(newUser);
-            });
-        } catch (parseError) {
-            console.error('Error al parsear el JSON:', parseError);
-            res.status(500).json({ error: 'Error al procesar los datos de los usuarios' });
-        }
-    });
-})
-
-app.put('/users/:id', (req, res) => {
-    const userId = parseInt(req.params.id);
-    const updatedUser = req.body;
-
-    // Validación básica
-    if (!updatedUser.name || !updatedUser.email) {
-        return res.status(400).json({ error: 'Nombre y correo electrónico son requeridos' });
+    const validation = validateUser(newUser, users);
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error });
     }
 
-    // Leer el archivo users.json
-    fs.readFile(userFilePath, 'utf8', (err, data) => {
-        if (err) {
-            console.error('Error al leer el archivo:', err);
-            return res.status(500).json({ error: 'Error al leer los usuarios' });
-        }
-
-        try {
-            const users = JSON.parse(data);
-            const userIndex = users.findIndex(user => user.id === userId);
-
-            if (userIndex === -1) {
-                return res.status(404).json({ error: 'Usuario no encontrado' });
-            }
-
-            // Actualizar el usuario
-            users[userIndex] = { ...users[userIndex], ...updatedUser };
-
-            // Escribir de nuevo en el archivo
-            fs.writeFile(userFilePath, JSON.stringify(users, null, 2), (writeErr) => {
-                if (writeErr) {
-                    console.error('Error al escribir en el archivo:', writeErr);
-                    return res.status(500).json({ error: 'Error al actualizar el usuario' });
-                }
-                res.json(users[userIndex]);
-            });
-        } catch (parseError) {
-            console.error('Error al parsear el JSON:', parseError);
-            res.status(500).json({ error: 'Error al procesar los datos de los usuarios' });
-        }
+    users.push(newUser);
+    fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), err => {
+      if (err) {
+        return res.status(500).json({ error: 'Error al guardar el usuario.' });
+      }
+      res.status(201).json(newUser);
     });
-})
+  });
+});
 
-//Prueba y control de servidor corriendo
+app.put('/users/:id', (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+  const updatedUser = req.body;
+
+  fs.readFile(usersFilePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error con conexión de datos.' });
+    }
+    let users = JSON.parse(data);
+
+    const validation = validateUser(updatedUser, users);
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    users = users.map(user =>
+      user.id === userId ? { ...user, ...updatedUser } : user
+    );
+    fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), err => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ error: 'Error al actualizar el usuario' });
+      }
+      res.json(updatedUser);
+    });
+  });
+});
+
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Servidor: http://localhost:${PORT}`);
 });
