@@ -97,6 +97,40 @@ app.get('/users', (req, res) => {
     });
 })
 
+app.post('/users', (req, res) => {
+    const newUser = req.body;
+
+    // Validación básica
+     if (!newUser.name || !newUser.email) {
+         return res.status(400).json({ error: 'Nombre y correo electrónico son requeridos' });
+     }
+
+    // Leer el archivo users.json
+    fs.readFile(userFilePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Error al leer el archivo:', err);
+            return res.status(500).json({ error: 'Error al leer los usuarios' });
+        }
+
+        try {
+            const users = JSON.parse(data);
+            users.push(newUser);
+
+            // Escribir de nuevo en el archivo
+            fs.writeFile(userFilePath, JSON.stringify(users, null, 2), (writeErr) => {
+                if (writeErr) {
+                    console.error('Error al escribir en el archivo:', writeErr);
+                    return res.status(500).json({ error: 'Error al guardar el nuevo usuario' });
+                }
+                res.status(201).json(newUser);
+            });
+        } catch (parseError) {
+            console.error('Error al parsear el JSON:', parseError);
+            res.status(500).json({ error: 'Error al procesar los datos de los usuarios' });
+        }
+    });
+})
+
 
 //Prueba y control de servidor corriendo
 app.listen(PORT, () => {
