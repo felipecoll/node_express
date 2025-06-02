@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 
 const LoggerMiddleware = require('./middlewares/logger.js'); // Importa el middleware de logger
+const errorHandler = require('./middlewares/errorHandler.js'); // Importa el middleware de manejo de errores
+
 const { validateUser } = require('./validation.js'); // Importa la función de validación
 
 const bodyParser = require('body-parser');
@@ -15,6 +17,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(LoggerMiddleware); // Usa el middleware de logger
+app.use(errorHandler); // Usa el middleware de manejo de errores
 
 const PORT = process.env.PORT || 3000;
 console.log(PORT);
@@ -157,6 +160,12 @@ app.delete('/users/:id', (req, res) => {
   });
 })
 
+app.get('/error', (req, res,next) => {
+  next(new Error('Este es un error simulado'));
+});
+
+
+//================== Server ================== >
 
 app.listen(PORT, () => {
   console.log(`Servidor: http://localhost:${PORT}`);
