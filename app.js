@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 
+const LoggerMiddleware = require('./middlewares/logger.js'); // Importa el middleware de logger
 const { validateUser } = require('./validation.js'); // Importa la función de validación
 
 const bodyParser = require('body-parser');
@@ -10,8 +11,10 @@ const path = require('path');
 const usersFilePath = path.join(__dirname, 'users.json');
 
 const app = express();
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(LoggerMiddleware); // Usa el middleware de logger
 
 const PORT = process.env.PORT || 3000;
 console.log(PORT);
