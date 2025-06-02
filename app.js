@@ -127,6 +127,34 @@ app.put('/users/:id', (req, res) => {
   });
 });
 
+
+//=================== DELETE ==================
+
+app.delete('/users/:id', (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+
+  fs.readFile(usersFilePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error con conexión de datos.' });
+    }
+    let users = JSON.parse(data);
+    const userIndex = users.findIndex(user => user.id === userId);
+
+    if (userIndex === -1) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    users.splice(userIndex, 1);
+    fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), err => {
+      if (err) {
+        return res.status(500).json({ error: 'Error al eliminar el usuario.' });
+      }
+      res.json({ message: 'Usuario eliminado correctamente.' });
+    });
+  });
+})
+
+
 app.listen(PORT, () => {
   console.log(`Servidor: http://localhost:${PORT}`);
 });
