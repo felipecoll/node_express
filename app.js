@@ -6,10 +6,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 
-const LoggerMiddleware = require('./middlewares/logger.js'); // Importa el middleware de logger
-const errorHandler = require('./middlewares/errorHandler.js'); // Importa el middleware de manejo de errores
-const authenticateToken = require('./middlewares/auth.js'); // Importa el middleware de autenticación
-const { validateUser } = require('./validation.js'); // Importa la función de validación
+const LoggerMiddleware = require('./src/middlewares/logger.js'); // Importa el middleware de logger
+const errorHandler = require('./src/middlewares/errorHandler.js'); // Importa el middleware de manejo de errores
+const authenticateToken = require('./src/middlewares/auth.js'); // Importa el middleware de autenticación
+const { validateUser } = require('./src/utils/validation.js'); // Importa la función de validación
 
 const bodyParser = require('body-parser');
 
@@ -31,14 +31,14 @@ console.log(PORT);
 app.get('/', (req, res) => {
   res.send(`
       <h1>Curso Express.js V3</h1>
-      <p>Esto es una aplicaciÃ³n node.js con express.js</p>
+      <p>Esto es una aplicación node.js con express.js</p>
       <p>Corre en el puerto: ${PORT}</p>
     `);
 });
 
 app.get('/users/:id', (req, res) => {
   const userId = req.params.id;
-  res.send(`Mostrar informaciÃ³n del usuario con ID: ${userId}`);
+  res.send(`Mostrar información del usuario con ID: ${userId}`);
 });
 
 app.get('/search', (req, res) => {
@@ -47,13 +47,13 @@ app.get('/search', (req, res) => {
 
   res.send(`
       <h2>Resultados de Busqueda:</h2>
-      <p>TÃ©rmino: ${terms}</p>
-      <p>CategorÃ­a: ${category}</p>
+      <p>Término: ${terms}</p>
+      <p>Categoría: ${category}</p>
     `);
 });
 
 app.post('/form', (req, res) => {
-  const name = req.body.nombre || 'AnÃ³nimo';
+  const name = req.body.nombre || 'Anónimo';
   const email = req.body.email || 'No proporcionado';
   res.json({
     message: 'Datos recibidos',
@@ -80,7 +80,7 @@ app.post('/api/data', (req, res) => {
 app.get('/users', (req, res) => {
   fs.readFile(usersFilePath, 'utf-8', (err, data) => {
     if (err) {
-      return res.status(500).json({ error: 'Error con conexiÃ³n de datos.' });
+      return res.status(500).json({ error: 'Error con conexión de datos.' });
     }
     const users = JSON.parse(data);
     res.json(users);
@@ -91,7 +91,7 @@ app.post('/users', (req, res) => {
   const newUser = req.body;
   fs.readFile(usersFilePath, 'utf-8', (err, data) => {
     if (err) {
-      return res.status(500).json({ error: 'Error con conexiÃ³n de datos.' });
+      return res.status(500).json({ error: 'Error con conexión de datos.' });
     }
     const users = JSON.parse(data);
 
@@ -116,7 +116,7 @@ app.put('/users/:id', (req, res) => {
 
   fs.readFile(usersFilePath, 'utf8', (err, data) => {
     if (err) {
-      return res.status(500).json({ error: 'Error con conexiÃ³n de datos.' });
+      return res.status(500).json({ error: 'Error con conexión de datos.' });
     }
     let users = JSON.parse(data);
 
@@ -143,7 +143,7 @@ app.delete('/users/:id', (req, res) => {
   const userId = parseInt(req.params.id, 10);
   fs.readFile(usersFilePath, 'utf8', (err, data) => {
     if (err) {
-      return res.status(500).json({ error: 'Error con conexiÃ³n de datos.' });
+      return res.status(500).json({ error: 'Error con conexión de datos.' });
     }
     let users = JSON.parse(data);
     users = users.filter(user => user.id !== userId);
@@ -175,33 +175,40 @@ app.get('/protected-route', authenticateToken, (req, res) => {
   res.send('Esta es una ruta protegida.');
 });
 
-// Register user 
-
 app.post('/register', async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
+  const { email, password, name } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Validación básica
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: 'Missing required fields' });
+  const newUser = await prisma.user.create({
+    data: {
+      email,
+      password: hashedPassword,
+      name,
+      role: 'USER'
     }
+  });
+  res.status(201).json({ message: 'User Registered Successfully' });
+});
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+app.post('/login', async (req, res, next) => {
+  const { email, password } = req.body;
+  const user = await prisma.user.findUnique({ where: { email } });
 
-    const newUser = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        role: 'USER',
-      },
-    });
+  if (!user)
+    return res.status(400).json({ error: 'Invalid email or password' });
+  const validPassword = await bcrypt.compare(password, user.password);
 
-    res.status(201).json({ message: 'User Registered Successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server Error' });
-  }
+  if (!validPassword)
+    res.status(400).json({ error: 'Invalid email or password' });
+
+  const token = jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '4h' }
+  );
+
+  res.json({ token });
+  next();
 });
 
 app.listen(PORT, () => {
