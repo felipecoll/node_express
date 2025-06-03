@@ -2,11 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 
 const LoggerMiddleware = require('./middlewares/logger.js'); // Importa el middleware de logger
 const errorHandler = require('./middlewares/errorHandler.js'); // Importa el middleware de manejo de errores
-
+const authenticateToken = require('./middlewares/auth.js'); // Importa el middleware de autenticación
 const { validateUser } = require('./validation.js'); // Importa la función de validación
 
 const bodyParser = require('body-parser');
@@ -21,6 +23,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(LoggerMiddleware); // Usa el middleware de logger
 app.use(errorHandler); // Usa el middleware de manejo de errores
+app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 console.log(PORT);
@@ -28,14 +31,14 @@ console.log(PORT);
 app.get('/', (req, res) => {
   res.send(`
       <h1>Curso Express.js V3</h1>
-      <p>Esto es una aplicación node.js con express.js</p>
+      <p>Esto es una aplicaciÃ³n node.js con express.js</p>
       <p>Corre en el puerto: ${PORT}</p>
     `);
 });
 
 app.get('/users/:id', (req, res) => {
   const userId = req.params.id;
-  res.send(`Mostrar información del usuario con ID: ${userId}`);
+  res.send(`Mostrar informaciÃ³n del usuario con ID: ${userId}`);
 });
 
 app.get('/search', (req, res) => {
@@ -44,13 +47,13 @@ app.get('/search', (req, res) => {
 
   res.send(`
       <h2>Resultados de Busqueda:</h2>
-      <p>Término: ${terms}</p>
-      <p>Categoría: ${category}</p>
+      <p>TÃ©rmino: ${terms}</p>
+      <p>CategorÃ­a: ${category}</p>
     `);
 });
 
 app.post('/form', (req, res) => {
-  const name = req.body.nombre || 'Anónimo';
+  const name = req.body.nombre || 'AnÃ³nimo';
   const email = req.body.email || 'No proporcionado';
   res.json({
     message: 'Datos recibidos',
@@ -77,7 +80,7 @@ app.post('/api/data', (req, res) => {
 app.get('/users', (req, res) => {
   fs.readFile(usersFilePath, 'utf-8', (err, data) => {
     if (err) {
-      return res.status(500).json({ error: 'Error con conexión de datos.' });
+      return res.status(500).json({ error: 'Error con conexiÃ³n de datos.' });
     }
     const users = JSON.parse(data);
     res.json(users);
@@ -88,7 +91,7 @@ app.post('/users', (req, res) => {
   const newUser = req.body;
   fs.readFile(usersFilePath, 'utf-8', (err, data) => {
     if (err) {
-      return res.status(500).json({ error: 'Error con conexión de datos.' });
+      return res.status(500).json({ error: 'Error con conexiÃ³n de datos.' });
     }
     const users = JSON.parse(data);
 
@@ -113,7 +116,7 @@ app.put('/users/:id', (req, res) => {
 
   fs.readFile(usersFilePath, 'utf8', (err, data) => {
     if (err) {
-      return res.status(500).json({ error: 'Error con conexión de datos.' });
+      return res.status(500).json({ error: 'Error con conexiÃ³n de datos.' });
     }
     let users = JSON.parse(data);
 
@@ -136,49 +139,70 @@ app.put('/users/:id', (req, res) => {
   });
 });
 
-
-//=================== DELETE ==================
-
 app.delete('/users/:id', (req, res) => {
   const userId = parseInt(req.params.id, 10);
-
   fs.readFile(usersFilePath, 'utf8', (err, data) => {
     if (err) {
-      return res.status(500).json({ error: 'Error con conexión de datos.' });
+      return res.status(500).json({ error: 'Error con conexiÃ³n de datos.' });
     }
     let users = JSON.parse(data);
-    const userIndex = users.findIndex(user => user.id === userId);
-
-    if (userIndex === -1) {
-      return res.status(404).json({ error: 'Usuario no encontrado.' });
-    }
-
-    users.splice(userIndex, 1);
+    users = users.filter(user => user.id !== userId);
     fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), err => {
       if (err) {
-        return res.status(500).json({ error: 'Error al eliminar el usuario.' });
+        return res.status(500).json({ error: 'Error al eliminar usuario.' });
       }
-      res.json({ message: 'Usuario eliminado correctamente.' });
+      res.status(204).send();
     });
   });
-})
-
-app.get('/error', (req, res,next) => {
-  next(new Error('Este es un error simulado'));
 });
 
-//================== Prisma ==================
+app.get('/error', (req, res, next) => {
+  next(new Error('Error Intencional'));
+});
+
 app.get('/db-users', async (req, res) => {
   try {
     const users = await prisma.user.findMany();
     res.json(users);
   } catch (error) {
-    console.error('Error al obtener usuarios:', error);
-    res.status(500).json({ error: 'Error al obtener usuarios' });
+    res
+      .status(500)
+      .json({ error: 'Error al comunicarse con la base de datos.' });
   }
 });
 
-//================== Server ================== >
+app.get('/protected-route', authenticateToken, (req, res) => {
+  res.send('Esta es una ruta protegida.');
+});
+
+// Register user 
+
+app.post('/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+
+    // Validación básica
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        role: 'USER',
+      },
+    });
+
+    res.status(201).json({ message: 'User Registered Successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Servidor: http://localhost:${PORT}`);
